@@ -2,29 +2,72 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 env:
   IMAGE_NAME: nhkwardana30/githuactioncicd-service-backend-1
   REGISTRY: docker.io
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
+  build:
+    runs-on: [self-hosted, linux]
+
+    outputs:
+      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push Image
+        run: |
+          docker build -t $REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+          docker push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+
+      - name: Notify Discord (Build Success)
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{"content":"🛠️ Build SUCCESS\nImage: '"$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"'"}' \
+          ${{ secrets.DISCORD_WEBHOOK_URL }}
+
   deploy-staging:
+    needs: build
     if: github.event_name == 'push'
     runs-on: [self-hosted, linux]
     environment: staging
 
     steps:
       - name: Deploy to STAGING
-        run: echo "Deploying to STAGING..."
+        run: |
+          echo "Deploying ${{ needs.build.outputs.image }} to STAGING"
+
+      - name: Notify Discord (Staging)
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{"content":"🚀 Deployed to STAGING\nImage: '"${{ needs.build.outputs.image }}"'"}' \
+          ${{ secrets.DISCORD_WEBHOOK_URL }}
 
   deploy-production:
+    needs: build
     if: github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, linux]
     environment: production
 
     steps:
       - name: Deploy to PRODUCTION
-        run: echo "Deploying to PRODUCTION..."
+        run: |
+          echo "Deploying ${{ needs.build.outputs.image }} to PRODUCTION"
+
+      - name: Notify Discord (Production)
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{"content":"🔥 Deployed to PRODUCTION\nImage: '"${{ needs.build.outputs.image }}"'"}' \
+          ${{ secrets.DISCORD_WEBHOOK_URL }}
