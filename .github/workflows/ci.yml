@@ -1,6 +1,6 @@
 name: CI Self Hosted
 
-on: [push]
+on: [push, workflow_dispatch]
 
 env:
   IMAGE_NAME: nhkwardana30/githuactioncicd-service-backend-1
