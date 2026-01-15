@@ -1,104 +1,30 @@
-name: CI Self Hosted
+name: CI/CD Pipeline
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 env:
   IMAGE_NAME: nhkwardana30/githuactioncicd-service-backend-1
-  CONTAINER_NAME: service-backend-1
   REGISTRY: docker.io
 
 jobs:
-  build-and-push:
+  deploy-staging:
+    if: github.event_name == 'push'
     runs-on: [self-hosted, linux]
+    environment: staging
 
     steps:
-    - name: start Discord
-      run: |
-        curl -H "Content-Type: application/json" \
-        -d '{
-          "username": "GitHub Actions",
-          "embeds": [{
-            "title": "...............CI/CD START................",
-            "color": 3066993,
-            "fields": [
-              {"name": "Repository", "value": "'"${{ github.repository }}"'", "inline": true},
-              {"name": "Branch", "value": "'"${{ github.ref_name }}"'", "inline": true},
-              {"name": "Workflow", "value": "'"${{ github.workflow }}"'"}
-            ]
-          }]
-        }' \
-        ${{ secrets.DISCORD_WEBHOOK_URL }}
+      - name: Deploy to STAGING
+        run: echo "Deploying to STAGING..."
 
-    - name: Checkout repo
-      uses: actions/checkout@v4
+  deploy-production:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, linux]
+    environment: production
 
-    - name: Login to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Build Docker image
-      run: docker build -t $REGISTRY/${{ env.IMAGE_NAME }}:latest .
-
-    - name: Push image to DockerHub
-      run: docker push $REGISTRY/${{ env.IMAGE_NAME }}:latest
-
-    - name: Create SSH key file
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-
-    - name: SSH Deploy to VM
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
-          echo "Logging into DockerHub..."
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-
-          echo "Pulling latest image..."
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/githuactioncicd-service-backend-1:latest
-
-          echo "Stopping & removing old container..."
-          docker stop service-backend-1 || true
-          docker rm service-backend-1 || true
-
-          echo "Running new container..."
-          docker run -d --name service-backend-1 -p 4000:4000 ${{ secrets.DOCKERHUB_USERNAME }}/githuactioncicd-service-backend-1:latest
-        EOF
-
-    - name: Notify Discord (Success)
-      if: success()
-      run: |
-        curl -H "Content-Type: application/json" \
-        -d '{
-          "username": "GitHub Actions",
-          "embeds": [{
-            "title": "✅ CI/CD SUCCESS",
-            "color": 3066993,
-            "fields": [
-              {"name": "Repository", "value": "'"${{ github.repository }}"'", "inline": true},
-              {"name": "Branch", "value": "'"${{ github.ref_name }}"'", "inline": true},
-              {"name": "Commit", "value": "'"${{ github.sha }}"'"}
-            ]
-          }]
-        }' \
-        ${{ secrets.DISCORD_WEBHOOK_URL }}
-
-    - name: Notify Discord (Failure)
-      if: failure()
-      run: |
-        curl -H "Content-Type: application/json" \
-        -d '{
-          "username": "GitHub Actions",
-          "embeds": [{
-            "title": "❌ CI/CD FAILED",
-            "color": 15158332,
-            "fields": [
-              {"name": "Repository", "value": "'"${{ github.repository }}"'", "inline": true},
-              {"name": "Branch", "value": "'"${{ github.ref_name }}"'", "inline": true},
-              {"name": "Workflow", "value": "'"${{ github.workflow }}"'"}
-            ]
-          }]
-        }' \
-        ${{ secrets.DISCORD_WEBHOOK_URL }}
+    steps:
+      - name: Deploy to PRODUCTION
+        run: echo "Deploying to PRODUCTION..."
