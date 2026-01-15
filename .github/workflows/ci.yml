@@ -52,7 +52,7 @@ jobs:
       - name: Notify Discord (Staging)
         run: |
           curl -H "Content-Type: application/json" \
-          -d '{"content":"🚀 Deployed to STAGING\nImage: '"${{ needs.build.outputs.image }}"'"}' \
+          -d '{"content":"🚀 Deployed to STAGING"}' \
           ${{ secrets.DISCORD_WEBHOOK_URL }}
 
   deploy-production:
@@ -69,5 +69,5 @@ jobs:
       - name: Notify Discord (Production)
         run: |
           curl -H "Content-Type: application/json" \
-          -d '{"content":"🔥 Deployed to PRODUCTION\nImage: '"${{ needs.build.outputs.image }}"'"}' \
+          -d '{"content":"🔥 Deployed to PRODUCTION"}' \
           ${{ secrets.DISCORD_WEBHOOK_URL }}
