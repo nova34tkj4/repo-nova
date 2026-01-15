@@ -39,7 +39,7 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: Build Docker image
-      run: docker build -t $REGISTRY/${{ env.IMAGE_NAME }}:latest .
+      run: ddocker build -t $REGISTRY/${{ env.IMAGE_NAME }}:latest .
 
     - name: Push image to DockerHub
       run: docker push $REGISTRY/${{ env.IMAGE_NAME }}:latest
